@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Estrus Onset Prototype</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Predicting Estrus Onset: Activity Profiles</h1>
+    <p class="subtitle">
+      Toggle the average 24-h activity profiles to explore sex differences.
+    </p>
+  </header>
+
+  <section id="visualization">
+    <div id="controls">
+      <label><input type="checkbox" id="femaleToggle" checked> Female</label>
+      <label><input type="checkbox" id="maleToggle" checked> Male</label>
+    </div>
+    <canvas id="activityChart"></canvas>
+  </section>
+
+  <section id="writeup">
+    <div class="writeup-section">
+      <h2>1. What have you done so far?</h2>
+      <p>We’ve set up a GitHub Pages–hosted prototype that displays our first interactive visualization: the mean 24-hour activity profiles of female and male mice under a 12 h light/dark cycle. Users can toggle each curve on or off via checkboxes, giving immediate feedback on sex-specific rhythm differences. The repository (e.g., <code>your-username/estrus-predictor</code>) is public and contains our HTML, CSS, and JavaScript files. This initial chart already highlights timing and amplitude shifts between sexes, forming the baseline for estrus onset predictions.</p>
+      <p>Structurally, the page imports Chart.js and our own <code>styles.css</code>, and lays out header, controls, visualization, and write-up sections. We’ve confirmed everything renders correctly on both desktop and mobile widths. Next steps will integrate our preprocessing outputs as JSON directly into the chart data. Overall, this prototype establishes the core UI and interactivity needed for the full project.</p>
+    </div>
+
+    <div class="writeup-section">
+      <h2>2. What will be the most challenging part to design and why?</h2>
+      <p>The trickiest component will be client-side feature extraction and real-time classification. Handling sliding-window calculations (rolling means, variances, peak counts) over 20 160 minutes of data without blocking the UI requires careful use of Web Workers or optimized array methods. We need to feed these features into a lightweight model—likely a small decision tree or logistic regression in JavaScript—and visualize its confidence over time.</p>
+      <p>Additionally, designing intuitive controls for users to adjust detection thresholds, view feature importance, and understand alerts is nontrivial. We want to avoid overwhelming them with statistics, so the UI must balance clarity and depth—showing model output alongside raw signals. Ensuring smooth performance and accessibility (keyboard navigation, responsive design) across browsers will be our top design/engineering hurdle in the next iteration.</p>
+    </div>
+  </section>
+
+  <script src="js/chart.js"></script>
+</body>
+</html>
