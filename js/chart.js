@@ -6,16 +6,16 @@ function minuteToTime(min) {
     const hrs = Math.floor(m / 60);
     const mins = m % 60;
     return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-}
+  }
   
-// Generate labels 0–1439
-const labels = Array.from({ length: 1440 }, (_, i) => i);
-// Sample data (replace with real data fetch)
-const femaleData = labels.map(m => 50 + 30 * Math.sin((2 * Math.PI / 1440) * (m - 360)));
-const maleData   = labels.map(m => 40 + 25 * Math.sin((2 * Math.PI / 1440) * (m - 300)));
+  // Generate labels 0–1439
+  const labels = Array.from({ length: 1440 }, (_, i) => i);
+  // Sample data (replace with real data fetch)
+  const femaleData = labels.map(m => 50 + 30 * Math.sin((2 * Math.PI / 1440) * (m - 360)));
+  const maleData   = labels.map(m => 40 + 25 * Math.sin((2 * Math.PI / 1440) * (m - 300)));
   
-const ctx = document.getElementById('activityChart').getContext('2d');
-const chart = new Chart(ctx, {
+  const ctx = document.getElementById('activityChart').getContext('2d');
+  const chart = new Chart(ctx, {
     type: 'line',
     data: {
       labels,
@@ -24,7 +24,7 @@ const chart = new Chart(ctx, {
           label: 'Female',
           data: femaleData,
           borderColor: 'rgba(255,99,132,0.8)',
-          backgroundColor: 'rgba(255,99,132,0.8)', // legend marker fill
+          backgroundColor: 'rgba(255,99,132,0.8)', // legend & tooltip square
           pointRadius: 0,
           fill: false
         },
@@ -46,22 +46,13 @@ const chart = new Chart(ctx, {
             maxTicksLimit: 12,
             stepSize: 120
           },
-          title: {
-            display: true,
-            text: 'Time of Day'
-          }
+          title: { display: true, text: 'Time of Day' }
         },
         y: {
-          title: {
-            display: true,
-            text: 'Mean Activity'
-          }
+          title: { display: true, text: 'Mean Activity' }
         }
       },
-      interaction: {
-        mode: 'nearest',
-        intersect: false
-      },
+      interaction: { mode: 'nearest', intersect: false },
       plugins: {
         legend: {
           display: true,
@@ -70,7 +61,6 @@ const chart = new Chart(ctx, {
           labels: {
             usePointStyle: true,
             pointStyle: 'circle',
-            // Override default marker color to match dataset
             generateLabels: (chart) => {
               return Chart.defaults.plugins.legend.labels.generateLabels(chart).map(label => ({
                 ...label,
@@ -83,32 +73,35 @@ const chart = new Chart(ctx, {
         tooltip: {
           callbacks: {
             // Show time in HH:MM instead of raw minutes
-            title: (items) => {
-              const minute = items[0].label;
-              return minuteToTime(minute);
-            },
-            // Keep the point color square in dataset color
+            title: (items) => minuteToTime(items[0].label),
+            // Return a string so we don't get [object Object]
             label: (ctx) => {
-              const clr = ctx.dataset.borderColor;
               const y = ctx.parsed.y.toFixed(2);
+              return `${ctx.dataset.label}: ${y}`;
+            },
+            // Color the little square in the tooltip
+            labelColor: (ctx) => {
               return {
-                text: `${ctx.dataset.label}: ${y}`,
-                // use the dataset color for the square
-                color: clr
+                borderColor: ctx.dataset.borderColor,
+                backgroundColor: ctx.dataset.backgroundColor
               };
             }
           }
         }
+      },
+      elements: {
+        point: { radius: 0 }
       }
     }
   });
   
   // Toggle datasets via checkboxes
-document.getElementById('femaleToggle').addEventListener('change', e => {
+  document.getElementById('femaleToggle').addEventListener('change', e => {
     chart.getDatasetMeta(0).hidden = !e.target.checked;
     chart.update();
-});
+  });
   document.getElementById('maleToggle').addEventListener('change', e => {
     chart.getDatasetMeta(1).hidden = !e.target.checked;
     chart.update();
-  });  
+  });
+  
