@@ -1,34 +1,52 @@
 // js/chart.js
 
-// 0) Define & register our light/dark shading plugin ONCE
 Chart.register({
   id: 'lightDark',
   beforeDraw(chart) {
-    const {ctx, chartArea:{top,bottom}, scales:{x}} = chart;
+    const {ctx, chartArea:{left, right, top, bottom}, scales:{x}} = chart;
     ctx.save();
+    
+    // Set clipping region to chart area
+    ctx.beginPath();
+    ctx.rect(left, top, right - left, bottom - top);
+    ctx.clip();
+    
     // dark half (0–720)
     ctx.fillStyle = 'rgba(0,0,0,0.05)';
-    ctx.fillRect(
-      x.getPixelForValue(0), top,
-      x.getPixelForValue(720) - x.getPixelForValue(0),
-      bottom - top
-    );
+    const darkStart = Math.max(x.getPixelForValue(0), left);
+    const darkEnd = Math.min(x.getPixelForValue(720), right);
+    if (darkEnd > darkStart) {
+      ctx.fillRect(darkStart, top, darkEnd - darkStart, bottom - top);
+    }
+    
     // light half (720–1439)
     ctx.fillStyle = 'rgba(255,255,200,0.2)';
-    ctx.fillRect(
-      x.getPixelForValue(720), top,
-      x.getPixelForValue(1439) - x.getPixelForValue(720),
-      bottom - top
-    );
+    const lightStart = Math.max(x.getPixelForValue(720), left);
+    const lightEnd = Math.min(x.getPixelForValue(1439), right);
+    if (lightEnd > lightStart) {
+      ctx.fillRect(lightStart, top, lightEnd - lightStart, bottom - top);
+    }
+    
     ctx.restore();
   }
 });
 
-// Global variable to store current chart instance
 let currentChart = null;
 
-// Store current event listeners to clean them up
 let currentEventListeners = [];
+
+let zoomState = {
+  originalXMin: 0,
+  originalXMax: 1439
+};
+
+
+let panState = {
+  isPanning: false,
+  startX: 0,
+  startMin: 0,
+  startMax: 0
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
   let wb;
@@ -58,7 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     femTemp:   sheetToRows('Fem Temp')
   };
 
-  // mode buttons (if present)
+
   const btnA = document.getElementById('btnActivity');
   const btnT = document.getElementById('btnTemperature');
   if (btnA && btnT) {
@@ -68,12 +86,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('btnActivity / btnTemperature not found—mode toggle disabled');
   }
 
-  // initial
+
+  if (!document.getElementById('zoomHint')) {
+    const visualization = document.getElementById('visualization');
+    if (visualization) {
+      const hint = document.createElement('div');
+      hint.id = 'zoomHint';
+      hint.style.cssText = 'text-align: center; font-size: 0.9em; color: #666; margin-top: 10px;';
+      hint.textContent = 'Use mouse wheel to zoom in/out • Click and drag to pan when zoomed • Zoom out fully to reset view';
+      visualization.appendChild(hint);
+    }
+  }
+
+
   initChart('Activity', dataSets.maleAct, dataSets.femAct);
 });
 
 function cleanupEventListeners() {
-  // Remove all existing event listeners
+
   currentEventListeners.forEach(({element, event, handler}) => {
     element.removeEventListener(event, handler);
   });
@@ -81,7 +111,6 @@ function cleanupEventListeners() {
 }
 
 function initChart(mode, maleRows, femRows) {
-  // Clean up previous event listeners
   cleanupEventListeners();
   
   // destroy any existing chart on that canvas
@@ -91,16 +120,32 @@ function initChart(mode, maleRows, femRows) {
     return;
   }
   
+  canvasEl.style.userSelect = 'none';
+  canvasEl.style.webkitUserSelect = 'none';
+  canvasEl.style.mozUserSelect = 'none';
+  canvasEl.style.msUserSelect = 'none';
+  
   if (currentChart) {
     currentChart.destroy();
     currentChart = null;
   }
 
-  // how many days
+
+  zoomState = {
+    originalXMin: 0,
+    originalXMax: 1439
+  };
+  
+  panState = {
+    isPanning: false,
+    startX: 0,
+    startMin: 0,
+    startMax: 0
+  };
+
   const total = maleRows.length;
   const days  = Math.floor(total/1440);
 
-  // helper: average a single mouse, optionally filtering estrus
   function avgCurve(rows, id, wantEstrus = null) {
     const sum = Array(1440).fill(0),
           cnt = Array(1440).fill(0);
@@ -134,14 +179,12 @@ function initChart(mode, maleRows, femRows) {
         femEAvg = groupAvg(femECurves),
         femNEAvg= groupAvg(femNECurves);
 
-  // build our three avg‐datasets
   const datasets = [
     mkDS(maleAvg,   'Male (avg)',               'lightblue',   'maleAvg',  true),
     mkDS(femNEAvg,  'Female non-estrus (avg)',  'lightpink',   'femNEAvg', true),
     mkDS(femEAvg,   'Female estrus (avg)',      '#d93d5f',     'femEAvg',  true)
   ];
 
-  // append all the hidden individual curves
   maleCurves.concat(femNECurves, femECurves).forEach(curve=>{
     datasets.push(mkDS(curve, '', 'transparent','', false));
   });
@@ -160,11 +203,9 @@ function initChart(mode, maleRows, femRows) {
         lightDark: {},
         legend: {
           labels: {
-            // only show items whose text isn't empty
             filter: item => item.text !== ''
           },
           onClick: (event, item, legend) => {
-            // Use the chart instance from the legend parameter
             const chart = legend.chart;
             const grp = chart.data.datasets[item.datasetIndex].metaGroup;
             const show = chart.data.datasets[item.datasetIndex].hidden;
@@ -181,13 +222,19 @@ function initChart(mode, maleRows, femRows) {
       scales: {
         x: {
           title: { display: true, text: 'Time of Day' },
-          ticks: { callback: minuteToTime, maxTicksLimit: 12, stepSize: 120 }
+          ticks: { callback: minuteToTime, maxTicksLimit: 12, stepSize: 120 },
+          min: 0,
+          max: 1439
         },
         y: {
           title: { display: true, text: mode }
         }
       },
-      interaction: { mode: 'nearest', intersect: false },
+      interaction: { 
+        mode: 'nearest', 
+        intersect: false,
+        axis: 'x'
+      },
       elements: { point: { radius: 0 } },
       tooltip: {
         callbacks: {
@@ -201,14 +248,44 @@ function initChart(mode, maleRows, femRows) {
             backgroundColor:ctx.dataset.backgroundColor
           })
         }
+      },
+      onHover: (event, activeElements) => {
+        const xScale = currentChart.scales.x;
+        const isZoomed = xScale.min > 0 || xScale.max < 1439;
+        ctx.canvas.style.cursor = isZoomed ? 'grab' : (activeElements.length > 0 ? 'pointer' : 'default');
       }
     }
   };
 
-  // Create the chart and store it globally
   currentChart = new Chart(ctx, config);
 
-  // bottom‐of‐page checkboxes
+  canvasEl.addEventListener('wheel', handleZoom);
+  
+  currentEventListeners.push({
+    element: canvasEl,
+    event: 'wheel',
+    handler: handleZoom
+  });
+
+  const panHandlers = {
+    mousedown: handlePanStart,
+    mousemove: handlePanMove,
+    mouseup: handlePanEnd,
+    mouseleave: handlePanEnd,
+    touchstart: handlePanStart,
+    touchmove: handlePanMove,
+    touchend: handlePanEnd
+  };
+  
+  Object.entries(panHandlers).forEach(([event, handler]) => {
+    canvasEl.addEventListener(event, handler);
+    currentEventListeners.push({
+      element: canvasEl,
+      event: event,
+      handler: handler
+    });
+  });
+
   const map = {
     maleToggle:             'maleAvg',
     femaleNonEstrusToggle: 'femNEAvg',
@@ -235,7 +312,6 @@ function initChart(mode, maleRows, femRows) {
     
     cb.addEventListener('change', handler);
     
-    // Store the event listener for cleanup
     currentEventListeners.push({
       element: cb,
       event: 'change',
@@ -244,7 +320,6 @@ function initChart(mode, maleRows, femRows) {
   });
 }
 
-// dataset factory
 function mkDS(data, label, color, metaGroup, visible) {
   return {
     label,
@@ -257,4 +332,115 @@ function mkDS(data, label, color, metaGroup, visible) {
     hidden:          !visible,
     metaGroup
   };
+}
+
+function handleZoom(e) {
+  e.preventDefault();
+  
+  if (!currentChart || panState.isPanning) return;
+  
+  const rect = e.target.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const chartArea = currentChart.chartArea;
+  
+  if (x < chartArea.left || x > chartArea.right) return;
+  
+  const xScale = currentChart.scales.x;
+  const currentMin = xScale.min;
+  const currentMax = xScale.max;
+  const range = currentMax - currentMin;
+  
+  const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
+  
+  const mouseX = xScale.getValueForPixel(x);
+  
+  let newRange = range * zoomFactor;
+  
+  const minRange = 60;
+  const maxRange = 1439;
+  newRange = Math.max(minRange, Math.min(maxRange, newRange));
+  
+  const ratio = (mouseX - currentMin) / range;
+  let newMin = mouseX - newRange * ratio;
+  let newMax = mouseX + newRange * (1 - ratio);
+  
+  if (newMin < 0) {
+    newMin = 0;
+    newMax = newRange;
+  }
+  if (newMax > 1439) {
+    newMax = 1439;
+    newMin = 1439 - newRange;
+  }
+  
+  xScale.options.min = Math.round(newMin);
+  xScale.options.max = Math.round(newMax);
+  
+  currentChart.update('none');
+}
+
+function handlePanStart(e) {
+  if (!currentChart) return;
+  
+  const xScale = currentChart.scales.x;
+  const isZoomed = xScale.min > 0 || xScale.max < 1439;
+  
+  if (!isZoomed) return;
+  
+  const rect = e.target.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const x = clientX - rect.left;
+  const chartArea = currentChart.chartArea;
+  
+  if (x < chartArea.left || x > chartArea.right) return;
+  
+  e.preventDefault();
+  
+  panState.isPanning = true;
+  panState.startX = clientX;
+  panState.startMin = xScale.min;
+  panState.startMax = xScale.max;
+  
+  e.target.style.cursor = 'grabbing';
+}
+
+function handlePanMove(e) {
+  if (!panState.isPanning || !currentChart) return;
+  
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const xScale = currentChart.scales.x;
+  const deltaX = clientX - panState.startX;
+  
+  const dataRange = panState.startMax - panState.startMin;
+  const pixelRange = currentChart.chartArea.right - currentChart.chartArea.left;
+  const dataDelta = -(deltaX / pixelRange) * dataRange;
+  
+  let newMin = panState.startMin + dataDelta;
+  let newMax = panState.startMax + dataDelta;
+  
+  if (newMin < 0) {
+    newMin = 0;
+    newMax = newMin + dataRange;
+  }
+  if (newMax > 1439) {
+    newMax = 1439;
+    newMin = newMax - dataRange;
+  }
+  
+  xScale.options.min = Math.round(newMin);
+  xScale.options.max = Math.round(newMax);
+  
+  currentChart.update('none');
+}
+
+function handlePanEnd(e) {
+  if (!panState.isPanning) return;
+  
+  panState.isPanning = false;
+  
+  if (currentChart) {
+    const xScale = currentChart.scales.x;
+    const isZoomed = xScale.min > 0 || xScale.max < 1439;
+    e.target.style.cursor = isZoomed ? 'grab' : 'default';
+  }
 }
