@@ -174,3 +174,154 @@ code {
     line-height: 1.2;
     max-width: 800px;
 }
+
+
+body.story {
+    background: #f9f9f9;
+    color: #333;
+    overflow-x: hidden;
+}
+  
+
+header.story-header {
+    background: none;
+    padding: 4rem 0 2rem;
+    text-align: center;
+}
+header.story-header h1 {
+    font-size: 2.5rem;
+    color: #2c3e50;
+}
+header.story-header .subtitle {
+    font-size: 1rem;
+    color: #555;
+    margin-top: 0.5rem;
+    line-height: 1.4;
+}
+  
+#scrolly-container {
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    margin: 2rem auto 3rem auto;
+    overflow: hidden;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: row;
+}
+  
+.chart-container {
+    width: 60%;
+    background: #f9f9f9;
+    padding: 1.5rem;
+    position: relative;
+}
+  
+.day-indicator {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #2c3e50;
+    color: #ffffff;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+  
+.chart-title {
+    text-align: center;
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+}
+  
+.legend {
+    justify-content: center;
+    margin-top: 1rem;
+}
+.legend .legend-item span {
+    color: #333;
+}
+  
+.story-content {
+    width: 40%;
+    padding: 1.5rem 2rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 3rem);
+}
+  
+.step {
+    background: #ffffff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1.5rem;
+    transition: transform 0.3s ease, background 0.3s ease;
+}
+.step h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.8rem;
+    color: #2c3e50;
+}
+.step p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #333;
+}
+.step.active {
+    background: #e8f6ff;
+    transform: scale(1.02);
+}
+  
+.tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: #ffffff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+}
+  
+.axis text {
+    fill: #333;
+    font-size: 11px;
+}
+.axis path,
+.axis line {
+    stroke: #333;
+    stroke-width: 1;
+}
+.axis-label {
+    fill: #333;
+    font-size: 12px;
+}
+  
+@media (max-width: 768px) {
+  #scrolly-container {
+      flex-direction: column;
+      max-width: 100%;
+    }
+    .chart-container,
+    .story-content {
+      width: 100%;
+    }
+    .story-content {
+      max-height: none;
+      overflow-y: visible;
+      padding: 1rem;
+    }
+    header.story-header h1 {
+      font-size: 2rem;
+    }
+    .step {
+      margin: 1.5rem 0;
+      padding: 1rem;
+    }
+}
+  
