@@ -110,6 +110,9 @@ canvas {
     gap: 1.5em;
     margin-bottom: 2em;
 }
+h1, h2, h3 {
+    text-align: center;
+}
 .writeup-section {
     background: #fff;
     padding: 1.2em 1.5em;

@@ -33,7 +33,7 @@ let currentEventListeners = [];
 document.addEventListener('DOMContentLoaded', async () => {
   let wb;
   try {
-    const resp = await fetch('data/Mouse_Data.xlsx');
+    const resp = await fetch('../data/Mouse_Data.xlsx');
     const ab   = await resp.arrayBuffer();
     wb = XLSX.read(ab, { type: 'array' });
   } catch (err) {

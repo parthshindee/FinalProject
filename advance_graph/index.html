@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Estrus Onset Prototype</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Predicting Estrus Onset: Activity &amp; Temperature Profiles</h1>
+      <p class="subtitle">
+        Toggle between activity and temperature - then compare male, female (non-estrus), and female (estrus) average curves.
+      </p>
+    </header>
+
+    <section id="howToRead">
+      <div class="writeup-section">
+        <h2>How to Read These Profiles</h2>
+        <p>
+          In the two charts below, you can switch between <strong>Activity</strong> and <strong>Temperature</strong> by clicking the buttons just above the chart. Each colored curve represents a 24‐hour, minute‐by‐minute average for one of three groups:
+        </p>
+        <ul>
+          <li><strong>Male (avg)</strong> - shown in light blue.</li>
+          <li><strong>Female (Non-Estrus avg)</strong> - shown in light pink.</li>
+          <li><strong>Female (Estrus avg)</strong> - shown in dark rose/red.</li>
+        </ul>
+        <p>
+          By default, you see all three average curves overlaid. You can hide or show any group with the checkboxes below the chart. If you click directly on a group name in the legend (e.g. “Female (Estrus)”), all of that group’s <em>individual‐mouse</em> traces will appear (or hide). This lets you compare the smooth average to the underlying variability across each mouse in that group.
+        </p>
+      </div>
+    </section>
+
+    <div id="modeControls">
+      <button id="btnActivity"  class="mode-btn">Activity</button>
+      <button id="btnTemperature" class="mode-btn">Temperature</button>
+    </div>
+
+    <section id="visualization">
+      <canvas id="homeChart"></canvas>
+      <div id="controls">
+        <label><input type="checkbox" id="maleToggle" checked> Male</label>
+        <label><input type="checkbox" id="femaleNonEstrusToggle" checked> Female (Non-Estrus)</label>
+        <label><input type="checkbox" id="femaleEstrusToggle" checked> Female (Estrus)</label>
+      </div>
+    </section>
+
+    <section id="writeup">
+      <div class="writeup-section">
+        <h2>Activity Profiles (Left Chart)</h2>
+        <p>
+          When “Activity” is active, the y-axis measures average movement counts per minute over a full 24-hour cycle. Note the background shading: the darker region (00:00-12:00) marks “lights on” hours in the vivarium, while the pale region (12:00-24:00) marks “lights off.” Key observations:
+        </p>
+        <ul>
+          <li>
+            <strong>Male mice</strong> (light blue) show a pronounced peak in activity shortly after lights off (around 18:00-20:00 in the chart's local time coordinates). Their average activity gradually declines through the next light period, dipping to a trough at midday before rising again at the next dark onset.
+          </li>
+          <li>
+            <strong>Female (Non-Estrus)</strong> (light pink) generally track the male curve but remain slightly lower in amplitude. Their activity still ramps up as soon as lights are turned off, but they spend more of the “lights on” period at a reduced baseline compared to males.
+          </li>
+          <li>
+            <strong>Female (Estrus)</strong> (dark red) exhibit a noticeably higher and more prolonged activity peak during the initial dark-phase hours. In other words, on estrus days, female mice run more intensely and for a longer duration in early night compared to both males and non-estrus females. As day breaks, estrus females' activity tapers off more gradually, resulting in a sustained plateau until mid-day, before finally reaching daytime lows. This shift suggests that estrus-phase females maintain elevated nocturnal activity over a greater fraction of the dark cycle.
+          </li>
+        </ul>
+
+        <h2>Temperature Profiles (Right Chart)</h2>
+        <p>
+          When “Temperature” is selected, the y-axis records average body temperature (in °C) minute by minute, again over a 24-hour span. You can still toggle each group via the checkboxes. Main takeaways:
+        </p>
+        <ul>
+          <li>
+            <strong>Male mice</strong> (light blue) begin the dark period at around 36.8 °C, rising quickly to a peak of roughly 37.8 °C within the first two hours. Their temperature then slowly declines through the rest of the night, bottoming out near 36.1 °C around midday, before climbing again as the next dark period approaches.
+          </li>
+          <li>
+            <strong>Female (Non-Estrus)</strong> (light pink) follow a similar circadian pattern but at a slightly elevated baseline. Their temperature peaks at about 38.1 °C during early night and stays fairly steady until just before dawn; thereafter, it drops to around 36.5 °C at midday. This indicates that even off-cycle, female mice run ~0.2-0.3 °C warmer than males at corresponding times.
+          </li>
+          <li>
+            <strong>Female (Estrus)</strong> (dark red) show the clearest temperature elevation. On estrus days, average body temperature peaks close to 38.3 °C shortly after lights off and remains elevated (≈38.0 - 38.2 °C) for a longer portion of the dark phase. The downward trend through daytime does not dip as far as non-estrus females, bottoming around 36.7 °C instead of 36.5 °C. Overall, the estrus cycle in female mice produces both a higher maximum temperature and a slower daytime decline, reflecting the known progesterone-driven thermogenic effect during estrus.
+          </li>
+        </ul>
+
+        <h2>Putting It All Together</h2>
+        <p>
+          Together, these two 24-h profiles demonstrate how biological sex and the estrus cycle modulate both activity and core temperature rhythms. The dark-phase activity surge is highest in estrus females, intermediate in males, and lowest (but still nocturnal) in non-estrus females. Temperature rhythms closely mirror these activity patterns: females in estrus run warmer at night and maintain a higher daytime nadir, whereas non-estrus females sit at a middle ground between estrus - peaks and male - troughs.
+        </p>
+        <p>
+          By allowing you to toggle between “Activity” and “Temperature,” and then to show/hide each group individually (as well as reveal all underlying individual-mouse traces), this interactive prototype highlights how the estrus cycle can be detected via changes in two parallel physiological signals. In future work, these patterns could serve as the basis for a predictive model that flags estrus onset out of a continuous data stream—potentially applicable to both basic research and translational studies.
+        </p>
+      </div>
+    </section>
+
+    <div style="text-align: center; margin: 2em 0;">
+      <a href="../conclusion/index.html" class="mode-btn">View Conclusion</a>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="../js/chart.js"></script>
+  </body>
+</html>

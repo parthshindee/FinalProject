@@ -1,50 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8">
-    <title>Estrus Onset Prototype</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8" />
+    <title>Home - Estrus Onset Prototype</title>
+    <link rel="stylesheet" href="css/styles.css" />
   </head>
+
   <body>
-    <header>
-      <h1>Predicting Estrus Onset: Activity Profiles</h1>
-      <p class="subtitle">
-        Toggle the average 24-h activity profiles to explore sex differences.
-      </p>
-    </header>
-
-    <div id="modeControls">
-      <button id="btnActivity"  class="mode-btn">Activity</button>
-      <button id="btnTemperature" class="mode-btn">Temperature</button>
-    </div>
-
-    <section id="visualization">
-      <canvas id="homeChart"></canvas>
-      <div id="controls">
-        <label><input type="checkbox" id="maleToggle" checked> Male</label>
-        <label><input type="checkbox" id="femaleNonEstrusToggle" checked> Female (Non-Estrus)</label>
-        <label><input type="checkbox" id="femaleEstrusToggle" checked> Female (Estrus)</label>
+    <div id="home-container">
+      <div class="conclusion-header" style="margin-bottom: 1.5em;">
+        <h1 class="conclusion-title">
+          Sex-Based Differences in Mouse Body Temperature
+          and Activity Patterns
+        </h1>
       </div>
-    </section>
 
-    <section id="writeup">
-      <div class="writeup-section">
-        <h2>1. What have you done so far?</h2>
-        <p>I've set up a GitHub Pages-hosted prototype that displays my first interactive visualization: the mean 24-hour activity profiles of female and male mice under a 12 h light/dark cycle. I loaded the raw Excel sheets, cleaned and merged the minute-by-minute activity and temperature data in JavaScript, and manipulated it into a single JSON format for Chart.js. Users can toggle each curve on or off via checkboxes, giving immediate feedback on sex-specific rhythm differences. All HTML, CSS and JS files have been uploaded to the repository, and I've confirmed the page renders correctly across desktop and mobile.  
+      <div class="writeup-section" style="margin-bottom: 2em;">
+        <p>
+          Even small variations in physiology can reveal important insights. In many past studies,
+          researchers have excluded female animals to avoid fluctuations caused by the estrus cycle,
+          thereby missing half of the biological picture. By looking at both sexes, we can uncover
+          how hormonal rhythms shape temperature and movement patterns.
         </p>
-        <p>Overall, this prototype establishes the core UI structure—header, controls, canvas, and write-up sections—and proves my data pipeline from raw sheets to chart. Next steps will embed my preprocessing outputs directly into the visualization and begin annotating known estrus deviations.</p>
+
+        <p>
+          In this project, we recorded core body temperatures and locomotor activity of male and
+          female mice every minute over two full weeks. All animals were kept on a 12-hour light/
+          12-hour dark schedule to synchronize their internal clocks. Over that 14-day window, we
+          captured thousands of data points from each animal—allowing us to compare baseline sex
+          differences and to see how female estrus cycles overlay on top of the daily rhythm.
+        </p>
+
+        <p>
+          Dive into the interactive graphs to discover:
+          <ul style="margin: 0.5em 0 0 1.2em; line-height: 1.5;">
+            <li>
+              How average temperature and activity levels differ between males and females
+            </li>
+            <li>
+              The extent to which estrus phases can be detected in female body-temperature traces
+            </li>
+            <li>
+              Minute-by-minute fluctuations that would be hidden by coarser, hourly summaries
+            </li>
+          </ul>
+        </p>
       </div>
-    
-      <div class="writeup-section">
-          <h2>2. What will be the most challenging part to design and why?</h2>
-          <p>The most challenging design aspect will be creating an engaging narrative that clearly shows why estrus onset matters and surprises viewers with insights from the data. Crafting a compelling hook using an “and-but-therefore” storytelling structure requires thoughtful pacing and transitions. Additionally, embedding the project video in a way that is visually prominent but avoids clutter will involve careful layout considerations.</p>
-          <p>Selecting visual encodings that are both expressive and intuitive—such as shading dark and light cycles or annotating estrus windows—will be critical. Ensuring interactive features like filtering options, detailed hover effects, and clear model confidence indicators are effective but not overwhelming is another significant hurdle.</p>
-          <p>Finally, refining the interactive elements to ensure they're bug-free, accessible (including keyboard navigation and responsive resizing), and cohesive with clear annotations and impactful takeaways will require meticulous attention to detail.</p>
+
+      <div style="text-align: center; margin-bottom: 2em;">
+        <a href="advance_graph/index.html" class="mode-btn">Explore the Story</a>
       </div>
-    </section>  
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <script src="js/chart.js"></script>
+    </div>
   </body>
 </html>
