@@ -174,6 +174,14 @@ function initChart() {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
+  // Define clip path to prevent overflow
+  svg.append("defs")
+    .append("clipPath")
+    .attr("id", "chart-clip")
+    .append("rect")
+    .attr("width", width)
+    .attr("height", height);
+
   // Create tooltip DIV (initially hidden)
   tooltip = d3
     .select("body")
@@ -193,17 +201,17 @@ function initChart() {
   // X scale: hours from 0 to 24
   xScale = d3.scaleLinear().domain([0, 24]).range([0, width]);
 
-  // Y scale for temperature: 36–39 °C (left axis)
+  // Y scale for temperature: 35.5–39 °C (left axis) - expanded range to prevent overflow
   yScaleTemp = d3
     .scaleLinear()
-    .domain([36, 39])
+    .domain([35.5, 39])
     .nice()
     .range([height, 0]);
 
-  // Y scale for activity: 0–1 (we will render ticks as percentages on the right)
+  // Y scale for activity: 0–100 for actual activity values (not 0-1)
   yScaleAct = d3
     .scaleLinear()
-    .domain([0, 1])
+    .domain([0, 100])
     .nice()
     .range([height, 0]);
 
@@ -232,15 +240,13 @@ function initChart() {
     .y((d) => yScaleAct(d.activity))
     .curve(d3.curveMonotoneX);
 
-  // Draw "dark-phase" background shading (hours 18–24 and 0–6)
-  addDarkShading(width, height);
-
+  // Draw axes first
   // Left Y-axis for temperature
   g.append("g")
     .attr("class", "axis")
     .call(d3.axisLeft(yScaleTemp).ticks(4));
 
-  // Right Y-axis for activity, formatted in whole-percent steps
+  // Right Y-axis for activity, formatted with % symbol
   g.append("g")
     .attr("class", "axis")
     .attr("transform", `translate(${width},0)`)
@@ -248,7 +254,7 @@ function initChart() {
       d3
         .axisRight(yScaleAct)
         .ticks(5)
-        .tickFormat((d) => `${Math.round(d * 100)}%`)
+        .tickFormat((d) => `${d}%`)
     );
 
   // X-axis at bottom
@@ -261,6 +267,9 @@ function initChart() {
         .ticks(6)
         .tickFormat((d) => `${d}:00`)
     );
+
+  // Draw "dark-phase" background shading (hours 18–24 and 0–6)
+  addDarkShading(width, height);
 
   // Left axis label: Temperature (in red color)
   g.append("text")
@@ -285,21 +294,25 @@ function initChart() {
     .text("Activity (%)");
 
   // Path elements for male (blue) and female (red) lines
-  tempPathMale = g
+  // Create a group for all lines with clipping
+  const linesGroup = g.append("g")
+    .attr("clip-path", "url(#chart-clip)");
+
+  tempPathMale = linesGroup
     .append("path")
     .attr("class", "temp-line-male")
     .attr("fill", "none")
     .attr("stroke", "lightblue")
     .attr("stroke-width", 3);
 
-  tempPathFemale = g
+  tempPathFemale = linesGroup
     .append("path")
     .attr("class", "temp-line-female")
     .attr("fill", "none")
     .attr("stroke", "#ff6b6b")
     .attr("stroke-width", 3);
 
-  actPathMale = g
+  actPathMale = linesGroup
     .append("path")
     .attr("class", "act-line-male")
     .attr("fill", "none")
@@ -307,48 +320,13 @@ function initChart() {
     .attr("stroke-width", 3)
     .attr("stroke-dasharray", "5,5");
 
-  actPathFemale = g
+  actPathFemale = linesGroup
     .append("path")
     .attr("class", "act-line-female")
     .attr("fill", "none")
     .attr("stroke", "#ff6b6b")
     .attr("stroke-width", 3)
     .attr("stroke-dasharray", "5,5");
-
-  // Add legend
-  const legend = g.append("g")
-    .attr("class", "legend")
-    .attr("transform", `translate(${width - 150}, 20)`);
-
-  // Male legend
-  legend.append("line")
-    .attr("x1", 0)
-    .attr("x2", 20)
-    .attr("y1", 0)
-    .attr("y2", 0)
-    .attr("stroke", "lightblue")
-    .attr("stroke-width", 3);
-  
-  legend.append("text")
-    .attr("x", 25)
-    .attr("y", 4)
-    .text("Male")
-    .style("font-size", "14px");
-
-  // Female legend
-  legend.append("line")
-    .attr("x1", 0)
-    .attr("x2", 20)
-    .attr("y1", 20)
-    .attr("y2", 20)
-    .attr("stroke", "#ff6b6b")
-    .attr("stroke-width", 3);
-  
-  legend.append("text")
-    .attr("x", 25)
-    .attr("y", 24)
-    .text("Female")
-    .style("font-size", "14px");
 
   // Add crosshair group (initially hidden)
   setupFocus(width, height);
@@ -363,8 +341,12 @@ function initChart() {
 
 // 3) Draw background rectangles behind "dark" hours
 function addDarkShading(width, height) {
+  // Insert shading at the beginning so it's behind everything
+  const shadingGroup = g.insert("g", ":first-child")
+    .attr("clip-path", "url(#chart-clip)");
+    
   // Gray overlay from 18:00 → 24:00
-  g.append("rect")
+  shadingGroup.append("rect")
     .attr("x", xScale(18))
     .attr("y", 0)
     .attr("width", xScale(24) - xScale(18))
@@ -372,7 +354,7 @@ function addDarkShading(width, height) {
     .attr("fill", "rgba(0,0,0,0.05)");
 
   // Gray overlay from 0:00 → 6:00
-  g.append("rect")
+  shadingGroup.append("rect")
     .attr("x", xScale(0))
     .attr("y", 0)
     .attr("width", xScale(6) - xScale(0))
@@ -526,10 +508,10 @@ function setupFocus(width, height) {
           `Day ${dMale.day}, ${dMale.hour}:00<br/>
            <strong>Male:</strong><br/>
            Temp: ${dMale.temperature.toFixed(1)} °C<br/>
-           Activity: ${Math.round(dMale.activity * 100)}%<br/>
+           Activity: ${dMale.activity.toFixed(1)}%<br/>
            <strong>Female:</strong><br/>
            Temp: ${dFemale.temperature.toFixed(1)} °C<br/>
-           Activity: ${Math.round(dFemale.activity * 100)}%`
+           Activity: ${dFemale.activity.toFixed(1)}%`
         )
         .style("left", event.pageX + 10 + "px")
         .style("top", event.pageY - 10 + "px");
