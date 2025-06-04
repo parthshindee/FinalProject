@@ -215,6 +215,15 @@ header.story-header .subtitle {
     background: #f9f9f9;
     padding: 1.5rem;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 3rem);
+}
+
+#chart {
+    flex: 1;
+    min-height: 400px;
+    position: relative;
 }
   
 .day-indicator {

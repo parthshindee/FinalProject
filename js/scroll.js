@@ -1,23 +1,12 @@
-// -------------------------------------------------------------
-// scroll.js
-//
-// Uses D3 + Scrollama to drive a step‐by‐step, day‐by‐day reveal
-// using real data from data/Mouse_Data.xlsx (female mice).
-// -------------------------------------------------------------
-
-// Global variables for chart elements
 let svg, g;
 let xScale, yScaleActivity, yScaleTemp;
 let activityLine, tempLine;
 let activityPath, tempPath;
 let focus, tooltip;
-let allData; // will hold processed day/hour averages
+let allData;
 
-// Margin conventions
 const margin = { top: 20, right: 30, bottom: 40, left: 50 };
 
-// 1) Load the Excel file, parse the “Fem Act” and “Fem Temp” sheets, 
-//    then compute hour‐by‐hour averages for each day (1–7).
 document.addEventListener("DOMContentLoaded", async () => {
   let workbook;
   try {
@@ -29,10 +18,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // Helper: convert a sheet into an array of row‐objects { ID: value, … }
   function sheetToRows(name) {
     const raw = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1 });
-    const ids = raw[0].slice(1); // first row: [ "Minute", "F1", "F2", … ]
+    const ids = raw[0].slice(1);
     return raw.slice(1).map(row => {
       const obj = {};
       ids.forEach((id, i) => {
@@ -42,15 +30,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Parse the female sheets
   const femActRows = sheetToRows("Fem Act");
   const femTempRows = sheetToRows("Fem Temp");
 
-  // Determine total minutes and days (1440 minutes/day)
   const totalMinutes = femActRows.length;
   const days = Math.floor(totalMinutes / 1440);
 
-  // Data structure: for each day (1–7), for each hour (0–23), accumulate sums & counts
   const actSum = Array.from({ length: days + 1 }, () =>
     Array.from({ length: 24 }, () => 0)
   );
@@ -65,7 +50,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     Array.from({ length: 24 }, () => 0)
   );
 
-  // Collect activity & temperature minute‐by‐minute into hourly bins
   femActRows.forEach((row, i) => {
     const day = Math.floor(i / 1440) + 1;
     const minuteOfDay = i % 1440;
@@ -86,7 +70,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // Build a single array of { day, hour, avgActivity, avgTemp }
+
   allData = [];
   for (let d = 1; d <= days; d++) {
     for (let h = 0; h < 24; h++) {
@@ -139,7 +123,7 @@ function initChart() {
     .domain([0, 1])
     .range([height, height / 2]);
 
-  // Temperature in [minTemp, maxTemp] – we know female temp is roughly 36–39 °C
+  // Temperature in [36, 39]
   yScaleTemp = d3
     .scaleLinear()
     .domain([36, 39])
@@ -230,6 +214,7 @@ function initChart() {
 }
 
 // 3) Draw semi‐transparent rectangles for “dark” hours (18:00–06:00)
+//    using the passed‐in height—no longer using svg.attr("height")
 function addDarkPeriods(width, height) {
   // 18:00 → 24:00 is dark
   g.append("rect")
@@ -306,7 +291,7 @@ function setupInteraction(width, height) {
     })
     .on("mousemove", function (event) {
       // Get mouse coordinates relative to the drawing area
-      const [mouseX, mouseY] = d3.pointer(event);
+      const [mouseX] = d3.pointer(event);
       const x0 = xScale.invert(mouseX - margin.left);
 
       // Determine which “step” is active → current day
