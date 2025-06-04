@@ -1,25 +1,24 @@
 // -------------------------------------------------------------
 // scroll.js
 //
-// A scroll‐driven “day‐by‐day” visualization of female mouse
-// activity (0–100%) and temperature (36–39 °C), using real data.
-// Both curves are drawn in black. Dual Y‐axes: left=temperature,
-// right=activity (displayed as percent).  
+// A scroll-driven "day-by-day" visualization comparing male and
+// female mouse activity (0–100%) and temperature (36–39 °C).
+// Shows 14 days of data with estrus cycle effects on days 6, 10, 14.
 // -------------------------------------------------------------
 
 // Globals for D3 elements
 let svg, g;
 let xScale, yScaleTemp, yScaleAct;
-let tempLine, actLine;
-let tempPath, actPath;
+let tempLineMale, tempLineFemale, actLineMale, actLineFemale;
+let tempPathMale, tempPathFemale, actPathMale, actPathFemale;
 let focus, tooltip;
-let allData; // holds { day, hour, activity, temperature }
+let allDataMale, allDataFemale; // holds { day, hour, activity, temperature }
 
 // Margins for the chart; note margin.right is larger so the "Activity" label fits
 const margin = { top: 20, right: 70, bottom: 40, left: 50 };
 
 
-// 1) Load Excel, compute hour‐by‐hour averages (days 1–7)
+// 1) Load Excel, compute hour-by-hour averages for both sexes (days 1–14)
 document.addEventListener("DOMContentLoaded", async () => {
   let workbook;
   try {
@@ -44,36 +43,71 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Read female Activity and Temperature sheets
+  // Read all sheets
+  const maleActRows = sheetToRows("Male Act");
+  const maleTempRows = sheetToRows("Male Temp");
   const femActRows = sheetToRows("Fem Act");
   const femTempRows = sheetToRows("Fem Temp");
 
   // Compute days (1440 minutes per day)
   const totalMinutes = femActRows.length;
-  const days = Math.floor(totalMinutes / 1440); // likely 14; we only storyboard first 7
+  const days = Math.floor(totalMinutes / 1440); // 14 days
 
-  // Prepare 2D arrays to sum and count per [day][hour]
-  const actSum = Array.from({ length: days + 1 }, () =>
+  // Prepare 2D arrays to sum and count per [day][hour] for both sexes
+  const actSumMale = Array.from({ length: days + 1 }, () =>
     Array.from({ length: 24 }, () => 0)
   );
-  const actCount = Array.from({ length: days + 1 }, () =>
+  const actCountMale = Array.from({ length: days + 1 }, () =>
     Array.from({ length: 24 }, () => 0)
   );
-  const tempSum = Array.from({ length: days + 1 }, () =>
+  const tempSumMale = Array.from({ length: days + 1 }, () =>
     Array.from({ length: 24 }, () => 0)
   );
-  const tempCount = Array.from({ length: days + 1 }, () =>
+  const tempCountMale = Array.from({ length: days + 1 }, () =>
+    Array.from({ length: 24 }, () => 0)
+  );
+  
+  const actSumFemale = Array.from({ length: days + 1 }, () =>
+    Array.from({ length: 24 }, () => 0)
+  );
+  const actCountFemale = Array.from({ length: days + 1 }, () =>
+    Array.from({ length: 24 }, () => 0)
+  );
+  const tempSumFemale = Array.from({ length: days + 1 }, () =>
+    Array.from({ length: 24 }, () => 0)
+  );
+  const tempCountFemale = Array.from({ length: days + 1 }, () =>
     Array.from({ length: 24 }, () => 0)
   );
 
-  // Bin every minute into (day, hour)
+  // Bin every minute into (day, hour) for males
+  maleActRows.forEach((row, i) => {
+    const day = Math.floor(i / 1440) + 1;
+    const minuteOfDay = i % 1440;
+    const hour = Math.floor(minuteOfDay / 60);
+    Object.values(row).forEach((val) => {
+      actSumMale[day][hour] += val;
+      actCountMale[day][hour]++;
+    });
+  });
+  maleTempRows.forEach((row, i) => {
+    const day = Math.floor(i / 1440) + 1;
+    const minuteOfDay = i % 1440;
+    const hour = Math.floor(minuteOfDay / 60);
+    Object.values(row).forEach((val) => {
+      tempSumMale[day][hour] += val;
+      tempCountMale[day][hour]++;
+    });
+  });
+
+  // Bin every minute into (day, hour) for females
   femActRows.forEach((row, i) => {
     const day = Math.floor(i / 1440) + 1;
     const minuteOfDay = i % 1440;
     const hour = Math.floor(minuteOfDay / 60);
     Object.values(row).forEach((val) => {
-      actSum[day][hour] += val;
-      actCount[day][hour]++;
+      actSumFemale[day][hour] += val;
+      actCountFemale[day][hour]++;
     });
   });
   femTempRows.forEach((row, i) => {
@@ -81,24 +115,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     const minuteOfDay = i % 1440;
     const hour = Math.floor(minuteOfDay / 60);
     Object.values(row).forEach((val) => {
-      tempSum[day][hour] += val;
-      tempCount[day][hour]++;
+      tempSumFemale[day][hour] += val;
+      tempCountFemale[day][hour]++;
     });
   });
 
-  // Build `allData` = [ {day, hour, activity (0–1), temperature}, ... ] for days 1–7
-  allData = [];
-  for (let d = 1; d <= Math.min(days, 7); d++) {
+  // Build data arrays for both sexes
+  allDataMale = [];
+  allDataFemale = [];
+  
+  for (let d = 1; d <= Math.min(days, 14); d++) {
     for (let h = 0; h < 24; h++) {
-      const avgAct =
-        actCount[d][h] > 0 ? actSum[d][h] / actCount[d][h] : 0;
-      const avgTemp =
-        tempCount[d][h] > 0 ? tempSum[d][h] / tempCount[d][h] : 0;
-      allData.push({
+      // Male data
+      const avgActMale =
+        actCountMale[d][h] > 0 ? actSumMale[d][h] / actCountMale[d][h] : 0;
+      const avgTempMale =
+        tempCountMale[d][h] > 0 ? tempSumMale[d][h] / tempCountMale[d][h] : 0;
+      allDataMale.push({
         day: d,
         hour: h,
-        activity: avgAct,
-        temperature: avgTemp,
+        activity: avgActMale,
+        temperature: avgTempMale,
+      });
+      
+      // Female data
+      const avgActFemale =
+        actCountFemale[d][h] > 0 ? actSumFemale[d][h] / actCountFemale[d][h] : 0;
+      const avgTempFemale =
+        tempCountFemale[d][h] > 0 ? tempSumFemale[d][h] / tempCountFemale[d][h] : 0;
+      allDataFemale.push({
+        day: d,
+        hour: h,
+        activity: avgActFemale,
+        temperature: avgTempFemale,
       });
     }
   }
@@ -129,7 +178,17 @@ function initChart() {
   tooltip = d3
     .select("body")
     .append("div")
-    .attr("class", "tooltip");
+    .attr("class", "tooltip")
+    .style("position", "absolute")
+    .style("background", "rgba(0, 0, 0, 0.9)")
+    .style("color", "white")
+    .style("padding", "12px")
+    .style("border-radius", "4px")
+    .style("pointer-events", "none")
+    .style("font-size", "12px")
+    .style("line-height", "1.4")
+    .style("opacity", "0")
+    .style("transition", "opacity 0.2s");
 
   // X scale: hours from 0 to 24
   xScale = d3.scaleLinear().domain([0, 24]).range([0, width]);
@@ -148,28 +207,40 @@ function initChart() {
     .nice()
     .range([height, 0]);
 
-  // Two line generators (both drawn in black)
-  tempLine = d3
+  // Line generators for both sexes
+  tempLineMale = d3
     .line()
     .x((d) => xScale(d.hour))
     .y((d) => yScaleTemp(d.temperature))
     .curve(d3.curveMonotoneX);
 
-  actLine = d3
+  tempLineFemale = d3
+    .line()
+    .x((d) => xScale(d.hour))
+    .y((d) => yScaleTemp(d.temperature))
+    .curve(d3.curveMonotoneX);
+
+  actLineMale = d3
     .line()
     .x((d) => xScale(d.hour))
     .y((d) => yScaleAct(d.activity))
     .curve(d3.curveMonotoneX);
 
-  // Draw “dark‐phase” background shading (hours 18–24 and 0–6)
+  actLineFemale = d3
+    .line()
+    .x((d) => xScale(d.hour))
+    .y((d) => yScaleAct(d.activity))
+    .curve(d3.curveMonotoneX);
+
+  // Draw "dark-phase" background shading (hours 18–24 and 0–6)
   addDarkShading(width, height);
 
-  // Left Y‐axis for temperature
+  // Left Y-axis for temperature
   g.append("g")
     .attr("class", "axis")
     .call(d3.axisLeft(yScaleTemp).ticks(4));
 
-  // Right Y‐axis for activity, formatted in whole‐percent steps
+  // Right Y-axis for activity, formatted in whole-percent steps
   g.append("g")
     .attr("class", "axis")
     .attr("transform", `translate(${width},0)`)
@@ -180,7 +251,7 @@ function initChart() {
         .tickFormat((d) => `${Math.round(d * 100)}%`)
     );
 
-  // X‐axis at bottom
+  // X-axis at bottom
   g.append("g")
     .attr("class", "axis")
     .attr("transform", `translate(0,${height})`)
@@ -202,7 +273,7 @@ function initChart() {
     .style("fill", "#ff6b6b")
     .text("Temperature (°C)");
 
-  // Right axis label: Activity (in teal), moved left by 20px so it does not get clipped
+  // Right axis label: Activity (in teal)
   g.append("text")
     .attr("class", "axis-label")
     .attr("transform", "rotate(-90)")
@@ -213,22 +284,73 @@ function initChart() {
     .style("fill", "#4ecdc4")
     .text("Activity (%)");
 
-  // Empty path elements for transitions
-  tempPath = g
+  // Path elements for male (blue) and female (red) lines
+  tempPathMale = g
     .append("path")
-    .attr("class", "temp-line")
+    .attr("class", "temp-line-male")
     .attr("fill", "none")
-    .attr("stroke", "#000")       // draw temperature curve in black
+    .attr("stroke", "lightblue")
     .attr("stroke-width", 3);
 
-  actPath = g
+  tempPathFemale = g
     .append("path")
-    .attr("class", "act-line")
+    .attr("class", "temp-line-female")
     .attr("fill", "none")
-    .attr("stroke", "#000")       // draw activity curve in black
+    .attr("stroke", "#ff6b6b")
     .attr("stroke-width", 3);
 
-  // Add a crosshair group (initially hidden)
+  actPathMale = g
+    .append("path")
+    .attr("class", "act-line-male")
+    .attr("fill", "none")
+    .attr("stroke", "lightblue")
+    .attr("stroke-width", 3)
+    .attr("stroke-dasharray", "5,5");
+
+  actPathFemale = g
+    .append("path")
+    .attr("class", "act-line-female")
+    .attr("fill", "none")
+    .attr("stroke", "#ff6b6b")
+    .attr("stroke-width", 3)
+    .attr("stroke-dasharray", "5,5");
+
+  // Add legend
+  const legend = g.append("g")
+    .attr("class", "legend")
+    .attr("transform", `translate(${width - 150}, 20)`);
+
+  // Male legend
+  legend.append("line")
+    .attr("x1", 0)
+    .attr("x2", 20)
+    .attr("y1", 0)
+    .attr("y2", 0)
+    .attr("stroke", "lightblue")
+    .attr("stroke-width", 3);
+  
+  legend.append("text")
+    .attr("x", 25)
+    .attr("y", 4)
+    .text("Male")
+    .style("font-size", "14px");
+
+  // Female legend
+  legend.append("line")
+    .attr("x1", 0)
+    .attr("x2", 20)
+    .attr("y1", 20)
+    .attr("y2", 20)
+    .attr("stroke", "#ff6b6b")
+    .attr("stroke-width", 3);
+  
+  legend.append("text")
+    .attr("x", 25)
+    .attr("y", 24)
+    .text("Female")
+    .style("font-size", "14px");
+
+  // Add crosshair group (initially hidden)
   setupFocus(width, height);
 
   // Plot Day 1 by default
@@ -239,7 +361,7 @@ function initChart() {
 }
 
 
-// 3) Draw background rectangles behind “dark” hours
+// 3) Draw background rectangles behind "dark" hours
 function addDarkShading(width, height) {
   // Gray overlay from 18:00 → 24:00
   g.append("rect")
@@ -259,25 +381,40 @@ function addDarkShading(width, height) {
 }
 
 
-// 4) Update both paths to show data for “day” (1–7)
+// 4) Update both paths to show data for "day" (1–14)
 function updateChartDay(day) {
-  const dayData = allData.filter((d) => d.day === day);
+  const dayDataMale = allDataMale.filter((d) => d.day === day);
+  const dayDataFemale = allDataFemale.filter((d) => d.day === day);
 
-  // Temperature curve transition
-  tempPath
-    .datum(dayData)
+  // Temperature curves
+  tempPathMale
+    .datum(dayDataMale)
     .transition()
     .duration(800)
     .ease(d3.easeQuadInOut)
-    .attr("d", tempLine);
+    .attr("d", tempLineMale);
 
-  // Activity curve transition
-  actPath
-    .datum(dayData)
+  tempPathFemale
+    .datum(dayDataFemale)
     .transition()
     .duration(800)
     .ease(d3.easeQuadInOut)
-    .attr("d", actLine);
+    .attr("d", tempLineFemale);
+
+  // Activity curves
+  actPathMale
+    .datum(dayDataMale)
+    .transition()
+    .duration(800)
+    .ease(d3.easeQuadInOut)
+    .attr("d", actLineMale);
+
+  actPathFemale
+    .datum(dayDataFemale)
+    .transition()
+    .duration(800)
+    .ease(d3.easeQuadInOut)
+    .attr("d", actLineFemale);
 }
 
 
@@ -287,19 +424,37 @@ function setupFocus(width, height) {
 
   focus = g.append("g").attr("class", "focus").style("display", "none");
 
-  // Circle for temperature (red)
+  // Circles for male temp and activity
   focus
     .append("circle")
+    .attr("class", "male-temp")
+    .attr("r", 5)
+    .attr("fill", "lightblue")
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 2);
+
+  focus
+    .append("circle")
+    .attr("class", "male-act")
+    .attr("r", 5)
+    .attr("fill", "lightblue")
+    .attr("stroke", "#fff")
+    .attr("stroke-width", 2);
+
+  // Circles for female temp and activity
+  focus
+    .append("circle")
+    .attr("class", "female-temp")
     .attr("r", 5)
     .attr("fill", "#ff6b6b")
     .attr("stroke", "#fff")
     .attr("stroke-width", 2);
 
-  // Circle for activity (teal)
   focus
     .append("circle")
+    .attr("class", "female-act")
     .attr("r", 5)
-    .attr("fill", "#4ecdc4")
+    .attr("fill", "#ff6b6b")
     .attr("stroke", "#fff")
     .attr("stroke-width", 2);
 
@@ -318,41 +473,63 @@ function setupFocus(width, height) {
     })
     .on("mousemove", function (event) {
       const [mouseX] = d3.pointer(event);
-      // Invert to get hour from mouseX (account for left margin)
       const x0 = xScale.invert(mouseX - margin.left);
 
-      // Find the currently active day (via the “.step.active” element)
       const currentDay = getCurrentStepDay();
-      const dayData = allData.filter((d) => d.day === currentDay);
-      const i = bisect(dayData, x0, 1);
-      const d0 = dayData[i - 1];
-      const d1 = dayData[i];
-      if (!d0 || !d1) return;
-      const d = x0 - d0.hour > d1.hour - x0 ? d1 : d0;
+      const dayDataMale = allDataMale.filter((d) => d.day === currentDay);
+      const dayDataFemale = allDataFemale.filter((d) => d.day === currentDay);
+      
+      const i = bisect(dayDataMale, x0, 1);
+      const d0Male = dayDataMale[i - 1];
+      const d1Male = dayDataMale[i];
+      const d0Female = dayDataFemale[i - 1];
+      const d1Female = dayDataFemale[i];
+      
+      if (!d0Male || !d1Male || !d0Female || !d1Female) return;
+      
+      const dMale = x0 - d0Male.hour > d1Male.hour - x0 ? d1Male : d0Male;
+      const dFemale = x0 - d0Female.hour > d1Female.hour - x0 ? d1Female : d0Female;
 
-      // Move the temperature circle
+      // Move the circles
       focus
-        .select("circle:nth-child(1)")
+        .select(".male-temp")
         .attr(
           "transform",
-          `translate(${xScale(d.hour)}, ${yScaleTemp(d.temperature)})`
+          `translate(${xScale(dMale.hour)}, ${yScaleTemp(dMale.temperature)})`
         );
 
-      // Move the activity circle
       focus
-        .select("circle:nth-child(2)")
+        .select(".male-act")
         .attr(
           "transform",
-          `translate(${xScale(d.hour)}, ${yScaleAct(d.activity)})`
+          `translate(${xScale(dMale.hour)}, ${yScaleAct(dMale.activity)})`
+        );
+
+      focus
+        .select(".female-temp")
+        .attr(
+          "transform",
+          `translate(${xScale(dFemale.hour)}, ${yScaleTemp(dFemale.temperature)})`
+        );
+
+      focus
+        .select(".female-act")
+        .attr(
+          "transform",
+          `translate(${xScale(dFemale.hour)}, ${yScaleAct(dFemale.activity)})`
         );
 
       // Show tooltip with both values
       tooltip
         .style("opacity", 1)
         .html(
-          `Day ${d.day}, ${d.hour}:00<br/>
-           Temp: ${d.temperature.toFixed(1)} °C<br/>
-           Activity: ${Math.round(d.activity * 100)}%`
+          `Day ${dMale.day}, ${dMale.hour}:00<br/>
+           <strong>Male:</strong><br/>
+           Temp: ${dMale.temperature.toFixed(1)} °C<br/>
+           Activity: ${Math.round(dMale.activity * 100)}%<br/>
+           <strong>Female:</strong><br/>
+           Temp: ${dFemale.temperature.toFixed(1)} °C<br/>
+           Activity: ${Math.round(dFemale.activity * 100)}%`
         )
         .style("left", event.pageX + 10 + "px")
         .style("top", event.pageY - 10 + "px");
@@ -360,7 +537,7 @@ function setupFocus(width, height) {
 }
 
 
-// 6) Helper: find day from the “.step.active” element
+// 6) Helper: find day from the ".step.active" element
 function getCurrentStepDay() {
   const active = document.querySelector(".step.active");
   return active ? +active.dataset.step + 1 : 1;
@@ -373,30 +550,12 @@ function updateVisualization(idx) {
   document.getElementById("dayIndicator").textContent = `Day ${day}`;
 
   const chartTitle = document.getElementById("chartTitle");
-  switch (idx) {
-    case 0:
-      chartTitle.textContent = "Day 1: Baseline Patterns";
-      break;
-    case 1:
-      chartTitle.textContent = "Day 2: Pattern Consistency";
-      break;
-    case 2:
-      chartTitle.textContent = "Day 3: Rhythm Established";
-      break;
-    case 3:
-      chartTitle.textContent = "Day 4: Early Estrus Signals";
-      break;
-    case 4:
-      chartTitle.textContent = "Day 5: Peak Estrus";
-      break;
-    case 5:
-      chartTitle.textContent = "Day 6: Sustained Estrus";
-      break;
-    case 6:
-      chartTitle.textContent = "Day 7: Recovery Phase";
-      break;
-    default:
-      chartTitle.textContent = `Day ${day}`;
+  const estrusDays = [6, 10, 14];
+  
+  if (estrusDays.includes(day)) {
+    chartTitle.textContent = `Day ${day}: Estrus Phase - Elevated Temperature`;
+  } else {
+    chartTitle.textContent = `Day ${day}: Regular Patterns`;
   }
 
   updateChartDay(day);
@@ -414,9 +573,9 @@ function initScrollama() {
       debug: false,
     })
     .onStepEnter((response) => {
-      // Remove “active” from all steps
+      // Remove "active" from all steps
       d3.selectAll(".step").classed("active", false);
-      // Mark current step as “active”
+      // Mark current step as "active"
       d3.select(response.element).classed("active", true);
       // Update the graph for this step
       updateVisualization(response.index);
