@@ -1,24 +1,13 @@
-// -------------------------------------------------------------
-// scroll.js
-//
-// A scroll-driven "day-by-day" visualization comparing male and
-// female mouse activity (0–100%) and temperature (36–39 °C).
-// Shows 14 days of data with estrus cycle effects on days 6, 10, 14.
-// -------------------------------------------------------------
-
-// Globals for D3 elements
 let svg, g, labelsGroup;
 let xScale, yScaleTemp, yScaleAct;
 let tempLineMale, tempLineFemale, actLineMale, actLineFemale;
 let tempPathMale, tempPathFemale, actPathMale, actPathFemale;
 let focus, tooltip;
-let allDataMale, allDataFemale; // holds { day, hour, activity, temperature }
+let allDataMale, allDataFemale;
 
-// Margins for the chart; note margin.right is larger so the "Activity" label fits
 const margin = { top: 20, right: 70, bottom: 40, left: 50 };
 
 
-// 1) Load Excel, compute hour-by-hour averages for both sexes (days 1–14)
 document.addEventListener("DOMContentLoaded", async () => {
   let workbook;
   try {
@@ -30,7 +19,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // Helper: turn a sheet into an array of {ID: value, ...} rows
   function sheetToRows(name) {
     const raw = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1 });
     const ids = raw[0].slice(1);
@@ -43,17 +31,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Read all sheets
   const maleActRows = sheetToRows("Male Act");
   const maleTempRows = sheetToRows("Male Temp");
   const femActRows = sheetToRows("Fem Act");
   const femTempRows = sheetToRows("Fem Temp");
 
-  // Compute days (1440 minutes per day)
   const totalMinutes = femActRows.length;
   const days = Math.floor(totalMinutes / 1440); // 14 days
 
-  // Prepare 2D arrays to sum and count per [day][hour] for both sexes
   const actSumMale = Array.from({ length: days + 1 }, () =>
     Array.from({ length: 24 }, () => 0)
   );
@@ -80,7 +65,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     Array.from({ length: 24 }, () => 0)
   );
 
-  // Bin every minute into (day, hour) for males
   maleActRows.forEach((row, i) => {
     const day = Math.floor(i / 1440) + 1;
     const minuteOfDay = i % 1440;
@@ -100,7 +84,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // Bin every minute into (day, hour) for females
   femActRows.forEach((row, i) => {
     const day = Math.floor(i / 1440) + 1;
     const minuteOfDay = i % 1440;
@@ -120,13 +103,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  // Build data arrays for both sexes
   allDataMale = [];
   allDataFemale = [];
   
   for (let d = 1; d <= Math.min(days, 14); d++) {
     for (let h = 0; h < 24; h++) {
-      // Male data
       const avgActMale =
         actCountMale[d][h] > 0 ? actSumMale[d][h] / actCountMale[d][h] : 0;
       const avgTempMale =
@@ -138,7 +119,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         temperature: avgTempMale,
       });
       
-      // Female data
       const avgActFemale =
         actCountFemale[d][h] > 0 ? actSumFemale[d][h] / actCountFemale[d][h] : 0;
       const avgTempFemale =
@@ -152,19 +132,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // Once data is ready, set up the chart
   initChart();
 });
 
 
-// 2) Create the SVG, scales, axes, lines, and initial plot
 function initChart() {
   const chartContainer = d3.select("#chart");
   const rect = chartContainer.node().getBoundingClientRect();
   const width = rect.width - margin.left - margin.right;
   const height = rect.height - margin.top - margin.bottom;
 
-  // Append SVG
   svg = chartContainer
     .append("svg")
     .attr("width", width + margin.left + margin.right)
@@ -174,7 +151,6 @@ function initChart() {
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // Define clip path to prevent overflow
   svg.append("defs")
     .append("clipPath")
     .attr("id", "chart-clip")
@@ -182,7 +158,6 @@ function initChart() {
     .attr("width", width)
     .attr("height", height);
 
-  // Create tooltip DIV (initially hidden)
   tooltip = d3
     .select("body")
     .append("div")
@@ -198,24 +173,20 @@ function initChart() {
     .style("opacity", "0")
     .style("transition", "opacity 0.2s");
 
-  // X scale: hours from 0 to 24
   xScale = d3.scaleLinear().domain([0, 24]).range([0, width]);
 
-  // Y scale for temperature: 35.5–39 °C (left axis) - expanded range to prevent overflow
   yScaleTemp = d3
     .scaleLinear()
     .domain([35.5, 39])
     .nice()
     .range([height, 0]);
 
-  // Y scale for activity: 0–100 for actual activity values (not 0-1)
   yScaleAct = d3
     .scaleLinear()
     .domain([0, 100])
     .nice()
     .range([height, 0]);
 
-  // Line generators for both sexes
   tempLineMale = d3
     .line()
     .x((d) => xScale(d.hour))
@@ -240,13 +211,10 @@ function initChart() {
     .y((d) => yScaleAct(d.activity))
     .curve(d3.curveMonotoneX);
 
-  // Draw axes first
-  // Left Y-axis for temperature
   g.append("g")
     .attr("class", "axis")
     .call(d3.axisLeft(yScaleTemp).ticks(4));
 
-  // Right Y-axis for activity, formatted with % symbol
   g.append("g")
     .attr("class", "axis")
     .attr("transform", `translate(${width},0)`)
@@ -257,7 +225,6 @@ function initChart() {
         .tickFormat((d) => `${d}%`)
     );
 
-  // X-axis at bottom
   g.append("g")
     .attr("class", "axis")
     .attr("transform", `translate(0,${height})`)
@@ -268,10 +235,8 @@ function initChart() {
         .tickFormat((d) => `${d}:00`)
     );
 
-  // Draw "dark-phase" background shading (hours 18–24 and 0–6)
   addDarkShading(width, height);
 
-  // Left axis label: Temperature (in black)
   g.append("text")
     .attr("class", "axis-label")
     .attr("transform", "rotate(-90)")
@@ -282,7 +247,6 @@ function initChart() {
     .style("fill", "#000")
     .text("Temperature (°C)");
 
-  // Right axis label: Activity (in black)
   g.append("text")
     .attr("class", "axis-label")
     .attr("transform", "rotate(-90)")
@@ -293,8 +257,6 @@ function initChart() {
     .style("fill", "#000")
     .text("Activity (%)");
 
-  // Path elements for male (blue) and female (red) lines
-  // Create a group for all lines with clipping
   const linesGroup = g.append("g")
     .attr("clip-path", "url(#chart-clip)");
 
@@ -328,28 +290,21 @@ function initChart() {
     .attr("stroke-width", 3)
     .attr("stroke-dasharray", "5,5");
 
-  // Add line labels
   labelsGroup = g.append("g")
     .attr("class", "line-labels");
 
-  // Add crosshair group (initially hidden)
   setupFocus(width, height);
 
-  // Plot Day 1 by default
   updateChartDay(1);
 
-  // Initialize Scrollama
   initScrollama();
 }
 
 
-// 3) Draw background rectangles behind "dark" hours
 function addDarkShading(width, height) {
-  // Insert shading at the beginning so it's behind everything
   const shadingGroup = g.insert("g", ":first-child")
     .attr("clip-path", "url(#chart-clip)");
     
-  // Gray overlay from 18:00 → 24:00
   shadingGroup.append("rect")
     .attr("x", xScale(18))
     .attr("y", 0)
@@ -357,7 +312,6 @@ function addDarkShading(width, height) {
     .attr("height", height)
     .attr("fill", "rgba(0,0,0,0.05)");
 
-  // Gray overlay from 0:00 → 6:00
   shadingGroup.append("rect")
     .attr("x", xScale(0))
     .attr("y", 0)
@@ -367,12 +321,10 @@ function addDarkShading(width, height) {
 }
 
 
-// 4) Update both paths to show data for "day" (1–14)
 function updateChartDay(day) {
   const dayDataMale = allDataMale.filter((d) => d.day === day);
   const dayDataFemale = allDataFemale.filter((d) => d.day === day);
 
-  // Temperature curves
   tempPathMale
     .datum(dayDataMale)
     .transition()
@@ -387,7 +339,6 @@ function updateChartDay(day) {
     .ease(d3.easeQuadInOut)
     .attr("d", tempLineFemale);
 
-  // Activity curves
   actPathMale
     .datum(dayDataMale)
     .transition()
@@ -402,18 +353,15 @@ function updateChartDay(day) {
     .ease(d3.easeQuadInOut)
     .attr("d", actLineFemale);
     
-  // Position line labels at specific hours where they won't overlap
-  // Clear existing labels first
   labelsGroup.selectAll("*").remove();
   
-  // Male temp label at hour 5 (early morning low point)
   const maleTempPoint = dayDataMale.find(d => d.hour === 5);
   if (maleTempPoint) {
     labelsGroup.append("text")
       .attr("x", xScale(5))
       .attr("y", yScaleTemp(maleTempPoint.temperature) + 20)
       .attr("text-anchor", "middle")
-      .attr("fill", "#4682B4") // Darker blue for better visibility
+      .attr("fill", "#4682B4") 
       .attr("font-size", "12px")
       .attr("font-weight", "600")
       .style("paint-order", "stroke")
@@ -423,14 +371,13 @@ function updateChartDay(day) {
       .text("Male Temp");
   }
   
-  // Female temp label at hour 3 (peak time)
   const femaleTempPoint = dayDataFemale.find(d => d.hour === 3);
   if (femaleTempPoint) {
     labelsGroup.append("text")
       .attr("x", xScale(3))
       .attr("y", yScaleTemp(femaleTempPoint.temperature) - 10)
       .attr("text-anchor", "middle")
-      .attr("fill", "#DC143C") // Darker red for better visibility
+      .attr("fill", "#DC143C") 
       .attr("font-size", "12px")
       .attr("font-weight", "600")
       .style("paint-order", "stroke")
@@ -440,14 +387,13 @@ function updateChartDay(day) {
       .text("Female Temp");
   }
   
-  // Male activity label at hour 15 (low activity period)
   const maleActPoint = dayDataMale.find(d => d.hour === 15);
   if (maleActPoint) {
     labelsGroup.append("text")
       .attr("x", xScale(15))
       .attr("y", yScaleAct(maleActPoint.activity) - 10)
       .attr("text-anchor", "middle")
-      .attr("fill", "#4682B4") // Darker blue
+      .attr("fill", "#4682B4")
       .attr("font-size", "12px")
       .attr("font-weight", "600")
       .style("paint-order", "stroke")
@@ -457,14 +403,13 @@ function updateChartDay(day) {
       .text("Male Activity");
   }
   
-  // Female activity label at hour 20 (high activity period)
   const femaleActPoint = dayDataFemale.find(d => d.hour === 20);
   if (femaleActPoint) {
     labelsGroup.append("text")
       .attr("x", xScale(20))
       .attr("y", yScaleAct(femaleActPoint.activity) - 10)
       .attr("text-anchor", "middle")
-      .attr("fill", "#DC143C") // Darker red
+      .attr("fill", "#DC143C")
       .attr("font-size", "12px")
       .attr("font-weight", "600")
       .style("paint-order", "stroke")
@@ -476,13 +421,11 @@ function updateChartDay(day) {
 }
 
 
-// 5) Create crosshair circles and tooltip on mousemove
 function setupFocus(width, height) {
   const bisect = d3.bisector((d) => d.hour).left;
 
   focus = g.append("g").attr("class", "focus").style("display", "none");
 
-  // Circles for male temp and activity
   focus
     .append("circle")
     .attr("class", "male-temp")
@@ -499,7 +442,6 @@ function setupFocus(width, height) {
     .attr("stroke", "#fff")
     .attr("stroke-width", 2);
 
-  // Circles for female temp and activity
   focus
     .append("circle")
     .attr("class", "female-temp")
@@ -516,7 +458,6 @@ function setupFocus(width, height) {
     .attr("stroke", "#fff")
     .attr("stroke-width", 2);
 
-  // Overlay to capture pointer events
   svg
     .append("rect")
     .attr("class", "overlay")
@@ -548,7 +489,6 @@ function setupFocus(width, height) {
       const dMale = x0 - d0Male.hour > d1Male.hour - x0 ? d1Male : d0Male;
       const dFemale = x0 - d0Female.hour > d1Female.hour - x0 ? d1Female : d0Female;
 
-      // Move the circles
       focus
         .select(".male-temp")
         .attr(
@@ -577,7 +517,6 @@ function setupFocus(width, height) {
           `translate(${xScale(dFemale.hour)}, ${yScaleAct(dFemale.activity)})`
         );
 
-      // Show tooltip with both values
       tooltip
         .style("opacity", 1)
         .html(
@@ -595,21 +534,18 @@ function setupFocus(width, height) {
 }
 
 
-// 6) Helper: find day from the ".step.active" element
 function getCurrentStepDay() {
   const active = document.querySelector(".step.active");
   return active ? +active.dataset.step + 1 : 1;
 }
 
 
-// 7) When a step scrolls into view, update chart title + day indicator
 function updateVisualization(idx) {
   const day = idx + 1;
   document.getElementById("dayIndicator").textContent = `Day ${day}`;
 
   const chartTitle = document.getElementById("chartTitle");
   
-  // Update title based on day and estrus cycle
   switch (day) {
     case 1:
       chartTitle.textContent = "Day 1: Establishing Sex Differences";
@@ -661,7 +597,6 @@ function updateVisualization(idx) {
 }
 
 
-// 8) Hook up Scrollama steps
 function initScrollama() {
   const scroller = scrollama();
 
@@ -672,19 +607,14 @@ function initScrollama() {
       debug: false,
     })
     .onStepEnter((response) => {
-      // Remove "active" from all steps
       d3.selectAll(".step").classed("active", false);
-      // Mark current step as "active"
       d3.select(response.element).classed("active", true);
-      // Update the graph for this step
       updateVisualization(response.index);
     });
 
-  // Recalculate on window resize
   window.addEventListener("resize", () => {
     scroller.resize();
   });
 
-  // Show day 1 on load
   updateVisualization(0);
 }
