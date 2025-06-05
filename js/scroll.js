@@ -7,7 +7,7 @@
 // -------------------------------------------------------------
 
 // Globals for D3 elements
-let svg, g;
+let svg, g, labelsGroup;
 let xScale, yScaleTemp, yScaleAct;
 let tempLineMale, tempLineFemale, actLineMale, actLineFemale;
 let tempPathMale, tempPathFemale, actPathMale, actPathFemale;
@@ -271,7 +271,7 @@ function initChart() {
   // Draw "dark-phase" background shading (hours 18–24 and 0–6)
   addDarkShading(width, height);
 
-  // Left axis label: Temperature (in red color)
+  // Left axis label: Temperature (in black)
   g.append("text")
     .attr("class", "axis-label")
     .attr("transform", "rotate(-90)")
@@ -279,10 +279,10 @@ function initChart() {
     .attr("x", -(height / 2))
     .attr("dy", "1em")
     .style("text-anchor", "middle")
-    .style("fill", "#ff6b6b")
+    .style("fill", "#000")
     .text("Temperature (°C)");
 
-  // Right axis label: Activity (in teal)
+  // Right axis label: Activity (in black)
   g.append("text")
     .attr("class", "axis-label")
     .attr("transform", "rotate(-90)")
@@ -290,7 +290,7 @@ function initChart() {
     .attr("x", -(height / 2))
     .attr("dy", "1em")
     .style("text-anchor", "middle")
-    .style("fill", "#4ecdc4")
+    .style("fill", "#000")
     .text("Activity (%)");
 
   // Path elements for male (blue) and female (red) lines
@@ -327,6 +327,10 @@ function initChart() {
     .attr("stroke", "#ff6b6b")
     .attr("stroke-width", 3)
     .attr("stroke-dasharray", "5,5");
+
+  // Add line labels
+  labelsGroup = g.append("g")
+    .attr("class", "line-labels");
 
   // Add crosshair group (initially hidden)
   setupFocus(width, height);
@@ -397,6 +401,78 @@ function updateChartDay(day) {
     .duration(800)
     .ease(d3.easeQuadInOut)
     .attr("d", actLineFemale);
+    
+  // Position line labels at specific hours where they won't overlap
+  // Clear existing labels first
+  labelsGroup.selectAll("*").remove();
+  
+  // Male temp label at hour 5 (early morning low point)
+  const maleTempPoint = dayDataMale.find(d => d.hour === 5);
+  if (maleTempPoint) {
+    labelsGroup.append("text")
+      .attr("x", xScale(5))
+      .attr("y", yScaleTemp(maleTempPoint.temperature) + 20)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#4682B4") // Darker blue for better visibility
+      .attr("font-size", "12px")
+      .attr("font-weight", "600")
+      .style("paint-order", "stroke")
+      .style("stroke", "white")
+      .style("stroke-width", "4px")
+      .style("stroke-linejoin", "round")
+      .text("Male Temp");
+  }
+  
+  // Female temp label at hour 3 (peak time)
+  const femaleTempPoint = dayDataFemale.find(d => d.hour === 3);
+  if (femaleTempPoint) {
+    labelsGroup.append("text")
+      .attr("x", xScale(3))
+      .attr("y", yScaleTemp(femaleTempPoint.temperature) - 10)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#DC143C") // Darker red for better visibility
+      .attr("font-size", "12px")
+      .attr("font-weight", "600")
+      .style("paint-order", "stroke")
+      .style("stroke", "white")
+      .style("stroke-width", "4px")
+      .style("stroke-linejoin", "round")
+      .text("Female Temp");
+  }
+  
+  // Male activity label at hour 15 (low activity period)
+  const maleActPoint = dayDataMale.find(d => d.hour === 15);
+  if (maleActPoint) {
+    labelsGroup.append("text")
+      .attr("x", xScale(15))
+      .attr("y", yScaleAct(maleActPoint.activity) - 10)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#4682B4") // Darker blue
+      .attr("font-size", "12px")
+      .attr("font-weight", "600")
+      .style("paint-order", "stroke")
+      .style("stroke", "white")
+      .style("stroke-width", "4px")
+      .style("stroke-linejoin", "round")
+      .text("Male Activity");
+  }
+  
+  // Female activity label at hour 20 (high activity period)
+  const femaleActPoint = dayDataFemale.find(d => d.hour === 20);
+  if (femaleActPoint) {
+    labelsGroup.append("text")
+      .attr("x", xScale(20))
+      .attr("y", yScaleAct(femaleActPoint.activity) - 10)
+      .attr("text-anchor", "middle")
+      .attr("fill", "#DC143C") // Darker red
+      .attr("font-size", "12px")
+      .attr("font-weight", "600")
+      .style("paint-order", "stroke")
+      .style("stroke", "white")
+      .style("stroke-width", "4px")
+      .style("stroke-linejoin", "round")
+      .text("Female Activity");
+  }
 }
 
 
@@ -532,12 +608,53 @@ function updateVisualization(idx) {
   document.getElementById("dayIndicator").textContent = `Day ${day}`;
 
   const chartTitle = document.getElementById("chartTitle");
-  const estrusDays = [6, 10, 14];
   
-  if (estrusDays.includes(day)) {
-    chartTitle.textContent = `Day ${day}: Estrus Phase - Elevated Temperature`;
-  } else {
-    chartTitle.textContent = `Day ${day}: Regular Patterns`;
+  // Update title based on day and estrus cycle
+  switch (day) {
+    case 1:
+      chartTitle.textContent = "Day 1: Establishing Sex Differences";
+      break;
+    case 2:
+      chartTitle.textContent = "Day 2: Consistent Sex-Based Patterns";
+      break;
+    case 3:
+      chartTitle.textContent = "Day 3: Baseline Established";
+      break;
+    case 4:
+      chartTitle.textContent = "Day 4: Pre-Estrus Stability";
+      break;
+    case 5:
+      chartTitle.textContent = "Day 5: Approaching First Estrus";
+      break;
+    case 6:
+      chartTitle.textContent = "Day 6: First Estrus Peak";
+      break;
+    case 7:
+      chartTitle.textContent = "Day 7: Post-Estrus Recovery";
+      break;
+    case 8:
+      chartTitle.textContent = "Day 8: Inter-Estrus Period";
+      break;
+    case 9:
+      chartTitle.textContent = "Day 9: Preparing for Next Cycle";
+      break;
+    case 10:
+      chartTitle.textContent = "Day 10: Second Estrus Peak";
+      break;
+    case 11:
+      chartTitle.textContent = "Day 11: Gradual Decline";
+      break;
+    case 12:
+      chartTitle.textContent = "Day 12: Stable Inter-Estrus";
+      break;
+    case 13:
+      chartTitle.textContent = "Day 13: Pre-Estrus Indicators";
+      break;
+    case 14:
+      chartTitle.textContent = "Day 14: Third Estrus Peak";
+      break;
+    default:
+      chartTitle.textContent = `Day ${day}`;
   }
 
   updateChartDay(day);
