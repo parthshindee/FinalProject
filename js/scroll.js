@@ -1,3 +1,5 @@
+// scroll.js
+
 let svg, g, labelsGroup;
 let xScale, yScaleTemp, yScaleAct;
 let tempLineMale, tempLineFemale, actLineMale, actLineFemale;
@@ -6,7 +8,6 @@ let focus, tooltip;
 let allDataMale, allDataFemale;
 
 const margin = { top: 20, right: 70, bottom: 40, left: 50 };
-
 
 document.addEventListener("DOMContentLoaded", async () => {
   let workbook;
@@ -51,7 +52,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const tempCountMale = Array.from({ length: days + 1 }, () =>
     Array.from({ length: 24 }, () => 0)
   );
-  
+
   const actSumFemale = Array.from({ length: days + 1 }, () =>
     Array.from({ length: 24 }, () => 0)
   );
@@ -105,7 +106,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   allDataMale = [];
   allDataFemale = [];
-  
+
   for (let d = 1; d <= Math.min(days, 14); d++) {
     for (let h = 0; h < 24; h++) {
       const avgActMale =
@@ -118,7 +119,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         activity: avgActMale,
         temperature: avgTempMale,
       });
-      
+
       const avgActFemale =
         actCountFemale[d][h] > 0 ? actSumFemale[d][h] / actCountFemale[d][h] : 0;
       const avgTempFemale =
@@ -134,7 +135,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   initChart();
 });
-
 
 function initChart() {
   const chartContainer = d3.select("#chart");
@@ -300,11 +300,10 @@ function initChart() {
   initScrollama();
 }
 
-
 function addDarkShading(width, height) {
   const shadingGroup = g.insert("g", ":first-child")
     .attr("clip-path", "url(#chart-clip)");
-    
+
   shadingGroup.append("rect")
     .attr("x", xScale(18))
     .attr("y", 0)
@@ -319,7 +318,6 @@ function addDarkShading(width, height) {
     .attr("height", height)
     .attr("fill", "rgba(0,0,0,0.05)");
 }
-
 
 function updateChartDay(day) {
   const dayDataMale = allDataMale.filter((d) => d.day === day);
@@ -352,74 +350,66 @@ function updateChartDay(day) {
     .duration(800)
     .ease(d3.easeQuadInOut)
     .attr("d", actLineFemale);
-    
-  labelsGroup.selectAll("*").remove();
-  
-  const maleTempPoint = dayDataMale.find(d => d.hour === 5);
-  if (maleTempPoint) {
-    labelsGroup.append("text")
-      .attr("x", xScale(5))
-      .attr("y", yScaleTemp(maleTempPoint.temperature) + 20)
-      .attr("text-anchor", "middle")
-      .attr("fill", "#4682B4") 
-      .attr("font-size", "12px")
-      .attr("font-weight", "600")
-      .style("paint-order", "stroke")
-      .style("stroke", "white")
-      .style("stroke-width", "4px")
-      .style("stroke-linejoin", "round")
-      .text("Male Temp");
-  }
-  
-  const femaleTempPoint = dayDataFemale.find(d => d.hour === 3);
-  if (femaleTempPoint) {
-    labelsGroup.append("text")
-      .attr("x", xScale(3))
-      .attr("y", yScaleTemp(femaleTempPoint.temperature) - 10)
-      .attr("text-anchor", "middle")
-      .attr("fill", "#DC143C") 
-      .attr("font-size", "12px")
-      .attr("font-weight", "600")
-      .style("paint-order", "stroke")
-      .style("stroke", "white")
-      .style("stroke-width", "4px")
-      .style("stroke-linejoin", "round")
-      .text("Female Temp");
-  }
-  
-  const maleActPoint = dayDataMale.find(d => d.hour === 15);
-  if (maleActPoint) {
-    labelsGroup.append("text")
-      .attr("x", xScale(15))
-      .attr("y", yScaleAct(maleActPoint.activity) - 10)
-      .attr("text-anchor", "middle")
-      .attr("fill", "#4682B4")
-      .attr("font-size", "12px")
-      .attr("font-weight", "600")
-      .style("paint-order", "stroke")
-      .style("stroke", "white")
-      .style("stroke-width", "4px")
-      .style("stroke-linejoin", "round")
-      .text("Male Activity");
-  }
-  
-  const femaleActPoint = dayDataFemale.find(d => d.hour === 20);
-  if (femaleActPoint) {
-    labelsGroup.append("text")
-      .attr("x", xScale(20))
-      .attr("y", yScaleAct(femaleActPoint.activity) - 10)
-      .attr("text-anchor", "middle")
-      .attr("fill", "#DC143C")
-      .attr("font-size", "12px")
-      .attr("font-weight", "600")
-      .style("paint-order", "stroke")
-      .style("stroke", "white")
-      .style("stroke-width", "4px")
-      .style("stroke-linejoin", "round")
-      .text("Female Activity");
-  }
-}
 
+  // ── STATIC TOP‐LEFT LEGEND ─────────────────────────────────────────────────
+  labelsGroup.selectAll("*").remove();
+
+  const labelX = 5;          // x position: small offset from left axis
+  const labelYStart = 15;    // y position: offset from top of chart <g>
+  const labelSpacing = 18;   // vertical spacing between each label
+
+  // 1) "Male Temp"
+  labelsGroup.append("text")
+    .attr("x", labelX)
+    .attr("y", labelYStart)
+    .attr("fill", "#4682B4")
+    .attr("font-size", "12px")
+    .attr("font-weight", "600")
+    .style("paint-order", "stroke")
+    .style("stroke", "white")
+    .style("stroke-width", "4px")
+    .style("stroke-linejoin", "round")
+    .text("Male Temp");
+
+  // 2) "Female Temp"
+  labelsGroup.append("text")
+    .attr("x", labelX)
+    .attr("y", labelYStart + labelSpacing)
+    .attr("fill", "#DC143C")
+    .attr("font-size", "12px")
+    .attr("font-weight", "600")
+    .style("paint-order", "stroke")
+    .style("stroke", "white")
+    .style("stroke-width", "4px")
+    .style("stroke-linejoin", "round")
+    .text("Female Temp");
+
+  // 3) "Male Activity"
+  labelsGroup.append("text")
+    .attr("x", labelX)
+    .attr("y", labelYStart + labelSpacing * 2)
+    .attr("fill", "#4682B4")
+    .attr("font-size", "12px")
+    .attr("font-weight", "600")
+    .style("paint-order", "stroke")
+    .style("stroke", "white")
+    .style("stroke-width", "4px")
+    .style("stroke-linejoin", "round")
+    .text("Male Activity");
+
+  // 4) "Female Activity"
+  labelsGroup.append("text")
+    .attr("x", labelX)
+    .attr("y", labelYStart + labelSpacing * 3)
+    .attr("fill", "#DC143C")
+    .attr("font-size", "12px")
+    .attr("font-weight", "600")
+    .style("paint-order", "stroke")
+    .style("stroke", "white")
+    .style("stroke-width", "4px")
+    .style("stroke-linejoin", "round")
+    .text("Female Activity");
+}
 
 function setupFocus(width, height) {
   const bisect = d3.bisector((d) => d.hour).left;
@@ -477,17 +467,19 @@ function setupFocus(width, height) {
       const currentDay = getCurrentStepDay();
       const dayDataMale = allDataMale.filter((d) => d.day === currentDay);
       const dayDataFemale = allDataFemale.filter((d) => d.day === currentDay);
-      
+
       const i = bisect(dayDataMale, x0, 1);
       const d0Male = dayDataMale[i - 1];
       const d1Male = dayDataMale[i];
       const d0Female = dayDataFemale[i - 1];
       const d1Female = dayDataFemale[i];
-      
+
       if (!d0Male || !d1Male || !d0Female || !d1Female) return;
-      
-      const dMale = x0 - d0Male.hour > d1Male.hour - x0 ? d1Male : d0Male;
-      const dFemale = x0 - d0Female.hour > d1Female.hour - x0 ? d1Female : d0Female;
+
+      const dMale =
+        x0 - d0Male.hour > d1Male.hour - x0 ? d1Male : d0Male;
+      const dFemale =
+        x0 - d0Female.hour > d1Female.hour - x0 ? d1Female : d0Female;
 
       focus
         .select(".male-temp")
@@ -533,19 +525,17 @@ function setupFocus(width, height) {
     });
 }
 
-
 function getCurrentStepDay() {
   const active = document.querySelector(".step.active");
   return active ? +active.dataset.step + 1 : 1;
 }
-
 
 function updateVisualization(idx) {
   const day = idx + 1;
   document.getElementById("dayIndicator").textContent = `Day ${day}`;
 
   const chartTitle = document.getElementById("chartTitle");
-  
+
   switch (day) {
     case 1:
       chartTitle.textContent = "Day 1: Establishing Sex Differences";
@@ -595,7 +585,6 @@ function updateVisualization(idx) {
 
   updateChartDay(day);
 }
-
 
 function initScrollama() {
   const scroller = scrollama();
