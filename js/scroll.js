@@ -147,17 +147,21 @@ function initChart() {
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom);
 
+  // Create a g for margins
   g = svg
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  svg.append("defs")
+  // Define clipping region
+  svg
+    .append("defs")
     .append("clipPath")
     .attr("id", "chart-clip")
     .append("rect")
     .attr("width", width)
     .attr("height", height);
 
+  // Tooltip div (absolutely positioned)
   tooltip = d3
     .select("body")
     .append("div")
@@ -173,6 +177,7 @@ function initChart() {
     .style("opacity", "0")
     .style("transition", "opacity 0.2s");
 
+  // Scales
   xScale = d3.scaleLinear().domain([0, 24]).range([0, width]);
 
   yScaleTemp = d3
@@ -187,6 +192,7 @@ function initChart() {
     .nice()
     .range([height, 0]);
 
+  // Line generators
   tempLineMale = d3
     .line()
     .x((d) => xScale(d.hour))
@@ -211,9 +217,8 @@ function initChart() {
     .y((d) => yScaleAct(d.activity))
     .curve(d3.curveMonotoneX);
 
-  g.append("g")
-    .attr("class", "axis")
-    .call(d3.axisLeft(yScaleTemp).ticks(4));
+  // Axes
+  g.append("g").attr("class", "axis").call(d3.axisLeft(yScaleTemp).ticks(4));
 
   g.append("g")
     .attr("class", "axis")
@@ -237,6 +242,7 @@ function initChart() {
 
   addDarkShading(width, height);
 
+  // Axis labels
   g.append("text")
     .attr("class", "axis-label")
     .attr("transform", "rotate(-90)")
@@ -257,61 +263,85 @@ function initChart() {
     .style("fill", "#000")
     .text("Activity (%)");
 
-  const linesGroup = g.append("g")
-    .attr("clip-path", "url(#chart-clip)");
+  // Group for lines, clipped to chart-clip
+  const linesGroup = g.append("g").attr("clip-path", "url(#chart-clip)");
 
+  // Male temperature line
   tempPathMale = linesGroup
     .append("path")
     .attr("class", "temp-line-male")
     .attr("fill", "none")
     .attr("stroke", "lightblue")
-    .attr("stroke-width", 3);
+    .attr("stroke-width", 3)
+    .style("cursor", "pointer")
+    .on("click", () => {
+      window.location.href = "advance_graph/index.html?mode=Temperature&group=male";
+    });
 
+  // Female temperature line
   tempPathFemale = linesGroup
     .append("path")
     .attr("class", "temp-line-female")
     .attr("fill", "none")
     .attr("stroke", "#ff6b6b")
-    .attr("stroke-width", 3);
+    .attr("stroke-width", 3)
+    .style("cursor", "pointer")
+    .on("click", () => {
+      window.location.href = "advance_graph/index.html?mode=Temperature&group=female";
+    });
 
+  // Male activity line (dashed)
   actPathMale = linesGroup
     .append("path")
     .attr("class", "act-line-male")
     .attr("fill", "none")
     .attr("stroke", "lightblue")
     .attr("stroke-width", 3)
-    .attr("stroke-dasharray", "5,5");
+    .attr("stroke-dasharray", "5,5")
+    .style("cursor", "pointer")
+    .on("click", () => {
+      window.location.href = "advance_graph/index.html?mode=Activity&group=male";
+    });
 
+  // Female activity line (dashed)
   actPathFemale = linesGroup
     .append("path")
     .attr("class", "act-line-female")
     .attr("fill", "none")
     .attr("stroke", "#ff6b6b")
     .attr("stroke-width", 3)
-    .attr("stroke-dasharray", "5,5");
+    .attr("stroke-dasharray", "5,5")
+    .style("cursor", "pointer")
+    .on("click", () => {
+      window.location.href = "advance_graph/index.html?mode=Activity&group=female";
+    });
 
-  labelsGroup = g.append("g")
-    .attr("class", "line-labels");
+  // Group for static labels (top-left legend)
+  labelsGroup = g.append("g").attr("class", "line-labels");
 
+  // Setup focus circles + tooltip on the SVG itself, not on overlay
   setupFocus(width, height);
 
+  // Draw Day 1 by default
   updateChartDay(1);
 
+  // Initialize Scrollama
   initScrollama();
 }
 
 function addDarkShading(width, height) {
-  const shadingGroup = g.insert("g", ":first-child")
-    .attr("clip-path", "url(#chart-clip)");
+  const shadingGroup = g.insert("g", ":first-child").attr("clip-path", "url(#chart-clip)");
 
-  shadingGroup.append("rect")
+  shadingGroup
+    .append("rect")
     .attr("x", xScale(18))
     .attr("y", 0)
     .attr("width", xScale(24) - xScale(18))
     .attr("height", height)
     .attr("fill", "rgba(0,0,0,0.05)");
 
-  shadingGroup.append("rect")
+  shadingGroup
+    .append("rect")
     .attr("x", xScale(0))
     .attr("y", 0)
     .attr("width", xScale(6) - xScale(0))
@@ -351,15 +381,15 @@ function updateChartDay(day) {
     .ease(d3.easeQuadInOut)
     .attr("d", actLineFemale);
 
-  // ── STATIC TOP‐LEFT LEGEND ─────────────────────────────────────────────────
+  // ── STATIC TOP-LEFT LEGEND ─────────────────────────────────────────────────
   labelsGroup.selectAll("*").remove();
 
-  const labelX = 5;          // x position: small offset from left axis
-  const labelYStart = 15;    // y position: offset from top of chart <g>
-  const labelSpacing = 18;   // vertical spacing between each label
+  const labelX = 5; // x offset from left axis
+  const labelYStart = 15; // y offset from top of chart <g>
+  const labelSpacing = 18; // vertical spacing between labels
 
-  // 1) "Male Temp"
-  labelsGroup.append("text")
+  labelsGroup
+    .append("text")
     .attr("x", labelX)
     .attr("y", labelYStart)
     .attr("fill", "#4682B4")
@@ -371,8 +401,8 @@ function updateChartDay(day) {
     .style("stroke-linejoin", "round")
     .text("Male Temp");
 
-  // 2) "Female Temp"
-  labelsGroup.append("text")
+  labelsGroup
+    .append("text")
     .attr("x", labelX)
     .attr("y", labelYStart + labelSpacing)
     .attr("fill", "#DC143C")
@@ -384,8 +414,8 @@ function updateChartDay(day) {
     .style("stroke-linejoin", "round")
     .text("Female Temp");
 
-  // 3) "Male Activity"
-  labelsGroup.append("text")
+  labelsGroup
+    .append("text")
     .attr("x", labelX)
     .attr("y", labelYStart + labelSpacing * 2)
     .attr("fill", "#4682B4")
@@ -397,8 +427,8 @@ function updateChartDay(day) {
     .style("stroke-linejoin", "round")
     .text("Male Activity");
 
-  // 4) "Female Activity"
-  labelsGroup.append("text")
+  labelsGroup
+    .append("text")
     .attr("x", labelX)
     .attr("y", labelYStart + labelSpacing * 3)
     .attr("fill", "#DC143C")
@@ -448,22 +478,27 @@ function setupFocus(width, height) {
     .attr("stroke", "#fff")
     .attr("stroke-width", 2);
 
+  // Instead of an overlay rect, listen on the SVG <g> area
   svg
-    .append("rect")
-    .attr("class", "overlay")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .style("fill", "none")
-    .style("pointer-events", "all")
     .on("mouseover", () => focus.style("display", null))
     .on("mouseout", () => {
       focus.style("display", "none");
       tooltip.style("opacity", 0);
     })
     .on("mousemove", function (event) {
-      const [mouseX] = d3.pointer(event);
-      const x0 = xScale.invert(mouseX - margin.left);
+      const [mouseX, mouseY] = d3.pointer(event, g.node());
+      if (
+        mouseX < 0 ||
+        mouseX > width ||
+        mouseY < 0 ||
+        mouseY > height
+      ) {
+        focus.style("display", "none");
+        tooltip.style("opacity", 0);
+        return;
+      }
 
+      const x0 = xScale.invert(mouseX);
       const currentDay = getCurrentStepDay();
       const dayDataMale = allDataMale.filter((d) => d.day === currentDay);
       const dayDataFemale = allDataFemale.filter((d) => d.day === currentDay);
@@ -593,7 +628,7 @@ function initScrollama() {
     .setup({
       step: ".step",
       offset: 0.5,
-      debug: false,
+      debug: false
     })
     .onStepEnter((response) => {
       d3.selectAll(".step").classed("active", false);
